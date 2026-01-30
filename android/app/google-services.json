@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "747127064515",
+    "project_id": "agroscan-firebase",
+    "storage_bucket": "agroscan-firebase.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:747127064515:android:2877aa423651e042191f76",
+        "android_client_info": {
+          "package_name": "com.example.agriscan"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAVeYGlmAGCADOSR7jrB9BogbnpF5SP_r0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

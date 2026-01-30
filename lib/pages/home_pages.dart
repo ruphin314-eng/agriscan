@@ -1,6 +1,8 @@
 import 'package:agriscan/pages/histor_page.dart';
-import 'package:agriscan/pages/profile_Page.dart';
+import 'package:agriscan/pages/preview_page.dart';
+import 'package:agriscan/pages/utilisateur_page.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -16,7 +18,7 @@ class _HomePageState extends State<HomePage> {
   final List<Widget> _pages = const [
     HomeContentPage(), // Page d'accueil avec boutons
     HistoryPage(), // Page historique
-    ProfilePage(), // Page profil
+    UtilisateurPage(), // Page profil
   ];
 
   @override
@@ -26,7 +28,7 @@ class _HomePageState extends State<HomePage> {
 
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
-        backgroundColor: const Color(0xFF2F4F2F),
+        backgroundColor: const Color.fromARGB(255, 14, 15, 14),
         selectedItemColor: Colors.greenAccent,
         unselectedItemColor: Colors.white,
         onTap: (index) {
@@ -93,7 +95,22 @@ class HomeContentPage extends StatelessWidget {
                 icon: Icons.camera_alt,
                 text: "Prendre Une Photo",
                 color: Colors.white70,
-                onTap: () {},
+                onTap: () async {
+                  final ImagePicker picker = ImagePicker();
+                  final XFile? image = await picker.pickImage(
+                    source: ImageSource.camera,
+                    imageQuality: 80,
+                  );
+                  if (image == null) return;
+
+                  if (!context.mounted) return;
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => PreviewPage(imagePath: image.path),
+                    ),
+                  );
+                },
               ),
 
               const SizedBox(height: 15),
@@ -101,7 +118,22 @@ class HomeContentPage extends StatelessWidget {
               _actionButton(
                 text: "Ou Importer Une Image",
                 color: Colors.white70,
-                onTap: () {},
+                onTap: () async {
+                  final ImagePicker picker = ImagePicker();
+                  final XFile? image = await picker.pickImage(
+                    source: ImageSource.gallery,
+                    imageQuality: 80,
+                  );
+                  if (image == null) return;
+
+                  if (!context.mounted) return;
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => PreviewPage(imagePath: image.path),
+                    ),
+                  );
+                },
               ),
 
               const SizedBox(height: 15),

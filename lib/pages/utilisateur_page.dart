@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'login_page.dart';
 
-class ProfilePage extends StatelessWidget {
-  const ProfilePage({super.key});
+class UtilisateurPage extends StatelessWidget {
+  const UtilisateurPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -10,11 +11,9 @@ class ProfilePage extends StatelessWidget {
         title: const Text("Profil"),
         backgroundColor: Colors.green,
       ),
-      body: const Center(
-        child: Text(
-          "Ici sera le profil de l’utilisateur",
-          style: TextStyle(fontSize: 18),
-        ),
+      body: Container(
+        color: const Color.fromARGB(50, 0, 0, 0),
+        child: LoginPage(), // ← plus de const ici
       ),
     );
   }

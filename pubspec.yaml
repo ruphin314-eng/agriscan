@@ -36,6 +36,18 @@ dependencies:
   cupertino_icons: ^1.0.8
   flutter_launcher_icons: ^0.14.4
   flutter_native_splash: ^2.4.7
+  image_picker: ^1.0.7
+  email_validator: ^2.1.17
+
+  # Firebase (versions COMPATIBLES entre elles)
+  firebase_core: ^3.4.0
+  firebase_auth: ^5.3.0
+  cloud_firestore: ^5.6.11
+  firebase_messaging: ^15.1.0
+
+  flutter_localizations:
+    sdk: flutter
+  
 
 dev_dependencies:
   flutter_test:
