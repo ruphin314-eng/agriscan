@@ -1,5 +1,6 @@
 import 'package:agriscan/pages/histor_page.dart';
 import 'package:agriscan/pages/preview_page.dart';
+import 'package:agriscan/pages/stock_maladie.dart';
 import 'package:agriscan/pages/utilisateur_page.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -85,14 +86,14 @@ class HomeContentPage extends StatelessWidget {
               // SOUS-TITRE
               const Text(
                 "Analyser Et Diagnostiquez Vos Plantes\nA Partir D’une Photo",
-                style: TextStyle(fontSize: 14, color: Colors.black87),
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600 , color: Colors.black87),
               ),
 
               const Spacer(),
 
               // BOUTONS
               _actionButton(
-                icon: Icons.camera_alt,
+                icon: Icons.camera_alt_outlined,
                 text: "Prendre Une Photo",
                 color: Colors.white70,
                 onTap: () async {
@@ -116,6 +117,7 @@ class HomeContentPage extends StatelessWidget {
               const SizedBox(height: 15),
 
               _actionButton(
+                icon: Icons.file_upload_outlined,
                 text: "Ou Importer Une Image",
                 color: Colors.white70,
                 onTap: () async {
@@ -139,10 +141,16 @@ class HomeContentPage extends StatelessWidget {
               const SizedBox(height: 15),
 
               _actionButton(
+                icon: Icons.storage_rounded,
                 text:
                     "Consulter Nos Stocks Des Plantes,\nMaladies Et Solutions Possibles",
                 color: Colors.white60,
-                onTap: () {},
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => StockPlante()),
+                  );
+                },
               ),
 
               const SizedBox(height: 30),
