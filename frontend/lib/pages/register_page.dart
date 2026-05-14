@@ -1,3 +1,5 @@
+import 'package:agriscan/pages/home_pages.dart';
+import 'package:agriscan/services/auth_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -26,51 +28,50 @@ class _RegisterPageState extends State<RegisterPage> {
   static const String baseUrl = 'http://10.0.2.2:8080';
 
   Future<void> register() async {
-    if (!_formKey.currentState!.validate()) return;
-    setState(() => loading = true);
+  if (!_formKey.currentState!.validate()) return;
+  setState(() => loading = true);
 
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/api/auth/register'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'name': nameController.text.trim(),
-          'telephone': phoneController.text.trim(),
-          'profil': profilController.text.trim(),
-          'email': emailController.text.trim(),
-          'password': passwordController.text.trim(),
-        }),
+  try {
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/auth/register'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'name': nameController.text.trim(),
+        'telephone': phoneController.text.trim(),
+        'profil': profilController.text.trim(),
+        'email': emailController.text.trim(),
+        'password': passwordController.text.trim(),
+      }),
+    );
+
+    if (!mounted) return;
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+
+      // ✅ Sauvegarder la session
+      await AuthStorage.save(data['id'], data['token']);
+
+      if (!mounted) return;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const HomePage()),
       );
-
-      if (!mounted) return;
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ProfilePage(
-              userId: data['id'],
-              token: data['token'],
-            ),
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Erreur : ${response.body}")),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Impossible de joindre le serveur")),
+        SnackBar(content: Text("Erreur : ${response.body}")),
       );
-    } finally {
-      if (mounted) setState(() => loading = false);
     }
+  } catch (e) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Impossible de joindre le serveur")),
+    );
+  } finally {
+    if (mounted) setState(() => loading = false);
   }
-
+}
   @override
   Widget build(BuildContext context) {
     return Scaffold(

@@ -1,7 +1,8 @@
-import 'package:agriscan/pages/histor_page.dart';
-import 'package:agriscan/pages/preview_page.dart';
+import 'package:agriscan/pages/chat_page.dart';
+import 'package:agriscan/pages/login_page.dart';
+import 'package:agriscan/pages/profile.dart';
 import 'package:agriscan/pages/stock_maladie.dart';
-import 'package:agriscan/pages/utilisateur_page.dart';
+import 'package:agriscan/services/auth_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -15,45 +16,91 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _currentIndex = 0;
 
-  // Liste des pages correspondant aux onglets
-  final List<Widget> _pages = const [
-    HomeContentPage(), // Page d'accueil avec boutons
-    HistoryPage(), // Page historique
-    UtilisateurPage(), // Page profil
-  ];
+  // ── Gérer la photo/galerie avec vérif connexion ────────────
+  Future<void> handleImage(ImageSource source) async {
+    final picker = ImagePicker();
+    final image = await picker.pickImage(source: source, imageQuality: 80);
+    if (image == null) return;
+    if (!mounted) return;
+
+    final isLoggedIn = await AuthStorage.isLoggedIn();
+    if (!mounted) return;
+
+    if (isLoggedIn) {
+      // ✅ Connecté → aller direct sur ChatPage
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => ChatPage(imagePath: image.path)),
+      );
+    } else {
+      // ❌ Pas connecté → LoginPage puis ChatPage
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => LoginPage(redirectImagePath: image.path),
+        ),
+      );
+    }
+  }
+
+  // ── Navbar ─────────────────────────────────────────────────
+  void onNavTap(int index) async {
+    if (index == _currentIndex) return;
+
+    if (index == 0) {
+      setState(() => _currentIndex = 0);
+    } else if (index == 1) {
+      setState(() => _currentIndex = 1);
+    } else if (index == 2) {
+      // Compte → vérifier si connecté
+      final isLoggedIn = await AuthStorage.isLoggedIn();
+      if (!mounted) return;
+
+      if (isLoggedIn) {
+        final userId = await AuthStorage.getUserId();
+        final token = await AuthStorage.getToken();
+        if (!mounted) return;
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ProfilePage(userId: userId!, token: token!),
+          ),
+        ).then((_) => setState(() => _currentIndex = 0));
+      } else {
+        // Pas connecté → LoginPage
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginPage()),
+        ).then((_) => setState(() => _currentIndex = 0));
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _pages[_currentIndex], // Affiche la page active
+      body: _currentIndex == 1 ? const HistoryContent() : _buildHomeContent(),
 
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         backgroundColor: const Color.fromARGB(255, 14, 15, 14),
         selectedItemColor: Colors.greenAccent,
         unselectedItemColor: Colors.white,
-        onTap: (index) {
-          setState(() => _currentIndex = index);
-        },
+        onTap: onNavTap,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Accueil'),
           BottomNavigationBarItem(
             icon: Icon(Icons.access_time),
             label: 'Historique',
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profil'),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Compte'),
         ],
       ),
     );
   }
-}
 
-// Widget séparé pour le contenu de la page d'accueil
-class HomeContentPage extends StatelessWidget {
-  const HomeContentPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildHomeContent() {
     return Container(
       width: double.infinity,
       height: double.infinity,
@@ -70,8 +117,6 @@ class HomeContentPage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 40),
-
-              // TITRE
               const Text(
                 "Détection Intelligentes\nDes Maladies Des Cultures",
                 style: TextStyle(
@@ -80,83 +125,40 @@ class HomeContentPage extends StatelessWidget {
                   color: Colors.black,
                 ),
               ),
-
               const SizedBox(height: 10),
-
-              // SOUS-TITRE
               const Text(
-                "Analyser Et Diagnostiquez Vos Plantes\nA Partir D’une Photo",
+                "Analyser Et Diagnostiquez Vos Plantes\nA Partir D'une Photo",
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
                   color: Colors.black87,
                 ),
               ),
-
               const Spacer(),
-
-              // BOUTONS
               _actionButton(
                 icon: Icons.camera_alt_outlined,
                 text: "Prendre Une Photo",
                 color: Colors.white70,
-                onTap: () async {
-                  final ImagePicker picker = ImagePicker();
-                  final XFile? image = await picker.pickImage(
-                    source: ImageSource.camera,
-                    imageQuality: 80,
-                  );
-                  if (image == null) return;
-
-                  if (!context.mounted) return;
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => PreviewPage(imagePath: image.path),
-                    ),
-                  );
-                },
+                onTap: () => handleImage(ImageSource.camera),
               ),
-
               const SizedBox(height: 15),
-
               _actionButton(
                 icon: Icons.file_upload_outlined,
                 text: "Ou Importer Une Image",
                 color: Colors.white70,
-                onTap: () async {
-                  final ImagePicker picker = ImagePicker();
-                  final XFile? image = await picker.pickImage(
-                    source: ImageSource.gallery,
-                    imageQuality: 80,
-                  );
-                  if (image == null) return;
-
-                  if (!context.mounted) return;
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => PreviewPage(imagePath: image.path),
-                    ),
-                  );
-                },
+                onTap: () => handleImage(ImageSource.gallery),
               ),
-
               const SizedBox(height: 15),
-
               _actionButton(
                 icon: Icons.storage_rounded,
                 text:
                     "Consulter Nos Stocks Des Plantes,\nMaladies Et Solutions Possibles",
                 color: Colors.white60,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => StockPlante()),
-                  );
-                },
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => StockPlante()),
+                ),
               ),
-
               const SizedBox(height: 30),
             ],
           ),
@@ -165,7 +167,6 @@ class HomeContentPage extends StatelessWidget {
     );
   }
 
-  // WIDGET BOUTON
   Widget _actionButton({
     IconData? icon,
     required String text,
@@ -199,6 +200,36 @@ class HomeContentPage extends StatelessWidget {
                   fontWeight: FontWeight.w500,
                 ),
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Contenu Historique intégré ─────────────────────────────────
+class HistoryContent extends StatelessWidget {
+  const HistoryContent({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      backgroundColor: Colors.black,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.history, size: 64, color: Colors.white24),
+            SizedBox(height: 16),
+            Text(
+              "Aucun historique pour l'instant",
+              style: TextStyle(color: Colors.white54, fontSize: 16),
+            ),
+            SizedBox(height: 8),
+            Text(
+              "Vos analyses apparaîtront ici",
+              style: TextStyle(color: Colors.white24, fontSize: 13),
             ),
           ],
         ),

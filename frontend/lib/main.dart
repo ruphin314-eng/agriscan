@@ -1,24 +1,23 @@
-import 'package:agriscan/pages/home_pages.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:agriscan/pages/home_pages.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const MyApp());
+  await SharedPreferences.getInstance();
+  runApp(const AgriscanApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class AgriscanApp extends StatelessWidget {
+  const AgriscanApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: 'Agriscan',
       debugShowCheckedModeBanner: false,
-      title: 'AgroScan',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
-        useMaterial3: true,
-      ),
-      home: const HomePage(), 
+      theme: ThemeData(fontFamily: 'Roboto'),
+      home: const HomePage(), // ✅ direct HomePage
     );
   }
 }

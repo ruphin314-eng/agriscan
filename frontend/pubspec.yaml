@@ -39,15 +39,11 @@ dependencies:
   image_picker: ^1.0.7
   http: ^1.2.0
   email_validator: ^2.1.17
-
-  # Firebase (versions COMPATIBLES entre elles)
-  firebase_core: ^3.4.0
-  firebase_auth: ^5.3.0
-  cloud_firestore: ^5.6.11
-  firebase_messaging: ^15.1.0
+ 
 
   flutter_localizations:
     sdk: flutter
+  shared_preferences: ^2.5.5
   
 
 dev_dependencies:
