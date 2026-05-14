@@ -166,8 +166,8 @@ class _RegisterPageState extends State<RegisterPage> {
                 _socialButtons(),
                 const SizedBox(height: 60),
                 Center(
-                  child: GestureDetector(
-                    onTap: () => Navigator.push(
+                  child: TextButton(
+                    onPressed: () => Navigator.push(
                       context,
                       MaterialPageRoute(
                           builder: (_) => const LoginPage()),
@@ -241,29 +241,15 @@ class _RegisterPageState extends State<RegisterPage> {
     return SizedBox(
       width: double.infinity,
       height: 52,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF2D8B3A), Color(0xFF4CD964)],
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-          ),
-          borderRadius: BorderRadius.circular(10),
+      child: TextButton(
+        onPressed: onPressed,
+        style: TextButton.styleFrom(
+          foregroundColor: const Color(0xFF4CD964),
+          textStyle: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600),
         ),
-        child: ElevatedButton(
-          onPressed: onPressed,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.transparent,
-            shadowColor: Colors.transparent,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10)),
-          ),
-          child: Text(label,
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600)),
-        ),
+        child: Text(label),
       ),
     );
   }

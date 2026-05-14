@@ -6,15 +6,12 @@ class UtilisateurPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Profil"),
-        backgroundColor: Colors.green,
-      ),
-      body: Container(
-        color: const Color.fromARGB(50, 0, 0, 0),
-        child: LoginPage(),
-      ),
+    return Navigator(
+      onGenerateRoute: (settings) {
+        return MaterialPageRoute(
+          builder: (context) => const LoginPage(),
+        );
+      },
     );
   }
 }
