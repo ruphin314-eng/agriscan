@@ -6,6 +6,8 @@ import apash.coding.sa.service.JwtService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/auth")
 @CrossOrigin(origins = "*")
@@ -81,6 +83,24 @@ public class AuthController {
             return ResponseEntity.ok("Mot de passe modifié avec succès");
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/refresh-token")
+    public ResponseEntity<?> refreshToken(
+            @RequestHeader("Authorization") String authHeader) {
+        try {
+            String oldToken = authHeader.substring(7);
+
+            // Vérifier que le token est valide (même expiré récemment)
+            String email = jwtService.extractEmail(oldToken);
+
+            // Générer un nouveau token
+            String newToken = jwtService.generateToken(email);
+
+            return ResponseEntity.ok(Map.of("token", newToken));
+        } catch (Exception e) {
+            return ResponseEntity.status(401).body("Token invalide");
         }
     }
 }

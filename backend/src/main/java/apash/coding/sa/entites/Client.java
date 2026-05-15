@@ -2,6 +2,8 @@ package apash.coding.sa.entites;
 
 import jakarta.persistence.*;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "CLIENT")
 public class Client {
@@ -25,6 +27,12 @@ public class Client {
     @Column(nullable = false)
     private String password; // sera hashé avec BCrypt
 
+    @Column
+    private String photoUrl;
+
+    @Column
+    private LocalDateTime dateInscription;
+
     public Client() {}
 
     public Client(String name, String email, String telephone, String profil, String password) {
@@ -33,6 +41,7 @@ public class Client {
         this.telephone = telephone;
         this.profil = profil;
         this.password = password;
+        this.dateInscription = LocalDateTime.now();
     }
 
     // Getters & Setters
@@ -53,4 +62,10 @@ public class Client {
 
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
+
+    public String getPhotoUrl() { return photoUrl; }
+    public void setPhotoUrl(String photoUrl) { this.photoUrl = photoUrl; }
+
+    public LocalDateTime getDateInscription() { return dateInscription; }
+    public void setDateInscription(LocalDateTime d) { this.dateInscription = d; }
 }

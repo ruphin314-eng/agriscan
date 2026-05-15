@@ -14,7 +14,7 @@ public class JwtService {
     // Clé secrète — à mettre dans application.properties en prod !
     private static final Key SECRET_KEY = Keys.secretKeyFor(SignatureAlgorithm.HS256);
 
-    private static final long EXPIRATION_MS = 1000 * 60 * 60 * 24; // 24h
+    private static final long EXPIRATION_MS = 1000 * 60 * 60; // 24h
 
     public String generateToken(String email) {
         return Jwts.builder()

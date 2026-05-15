@@ -22,14 +22,20 @@ public class ClientController {
     public ResponseEntity<?> getProfil(@PathVariable Integer id) {
         try {
             Client client = clientService.lire(id);
+            String date = client.getDateInscription() != null
+                    ? client.getDateInscription().toLocalDate().toString()
+                    : "Inconnue";
+
             return ResponseEntity.ok(
-                new ClientResponse(
-                    client.getId(),
-                    client.getName(),
-                    client.getEmail(),
-                    client.getTelephone(),
-                    client.getProfil()
-                )
+                    new ClientResponse(
+                            client.getId(),
+                            client.getName(),
+                            client.getEmail(),
+                            client.getTelephone(),
+                            client.getProfil(),
+                            client.getPhotoUrl(),
+                            date
+                    )
             );
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
