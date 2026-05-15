@@ -56,8 +56,7 @@ class _HistoryPageState extends State<HistoryPage> {
         ),
         title: const Text(
           "Historique",
-          style: TextStyle(
-              color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
       ),
 
@@ -68,12 +67,12 @@ class _HistoryPageState extends State<HistoryPage> {
         unselectedItemColor: Colors.white,
         onTap: onNavTap,
         items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Accueil'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.home), label: 'Accueil'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.access_time), label: 'Historique'),
-         BottomNavigationBarItem(
-              icon: Icon(Icons.person), label: 'Compte'),
+            icon: Icon(Icons.access_time),
+            label: 'Historique',
+          ),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Compte'),
         ],
       ),
 

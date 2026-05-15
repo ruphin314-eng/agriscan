@@ -1,5 +1,7 @@
+import 'package:agriscan/services/theme_provider.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart'; // ✅ seul import ImageSource
+import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 import 'dart:io';
 
 class ChatPage extends StatefulWidget {
@@ -60,19 +62,12 @@ class _ChatPageState extends State<ChatPage> {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
     _messageController.clear();
-
     setState(() {
-      _messages.add({
-        'role': 'user',
-        'type': 'text',
-        'content': text,
-      });
+      _messages.add({'role': 'user', 'type': 'text', 'content': text});
       _isLoading = true;
     });
     _scrollToBottom();
-
     await Future.delayed(const Duration(seconds: 1));
-
     setState(() {
       _messages.add({
         'role': 'assistant',
@@ -84,23 +79,14 @@ class _ChatPageState extends State<ChatPage> {
     _scrollToBottom();
   }
 
-  void _nouvelleDiscussion() {
-    setState(() => _messages.clear());
-  }
+  void _nouvelleDiscussion() => setState(() => _messages.clear());
 
   Future<void> _ajouterImage(ImageSource source) async {
     final picker = ImagePicker();
-    final image = await picker.pickImage(
-      source: source,
-      imageQuality: 80,
-    );
+    final image = await picker.pickImage(source: source, imageQuality: 80);
     if (image == null) return;
     setState(() {
-      _messages.add({
-        'role': 'user',
-        'type': 'image',
-        'imagePath': image.path,
-      });
+      _messages.add({'role': 'user', 'type': 'image', 'imagePath': image.path});
     });
     _scrollToBottom();
     _analyserImage();
@@ -108,8 +94,16 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   Widget build(BuildContext context) {
+    final darkMode = Provider.of<ThemeProvider>(context).darkMode;
+    final bgColor = darkMode
+        ? const Color(0xFF121212)
+        : const Color(0xFFF5F5F5);
+    final inputBgColor = darkMode ? const Color(0xFF2A2A2A) : Colors.grey[200]!;
+    final bubbleBgColor = darkMode ? const Color(0xFF2A2A2A) : Colors.white;
+    final textColor = darkMode ? Colors.white : Colors.black87;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A1A),
+      backgroundColor: bgColor,
       appBar: AppBar(
         backgroundColor: const Color(0xFF4CD964),
         automaticallyImplyLeading: false,
@@ -119,8 +113,7 @@ class _ChatPageState extends State<ChatPage> {
         ),
         title: const Text(
           "Agriscan AI",
-          style: TextStyle(
-              color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         actions: [
           IconButton(
@@ -134,58 +127,69 @@ class _ChatPageState extends State<ChatPage> {
         children: [
           Expanded(
             child: _messages.isEmpty
-                ? _buildEmptyState()
+                ? _buildEmptyState(textColor)
                 : ListView.builder(
                     controller: _scrollController,
                     padding: const EdgeInsets.all(16),
-                    itemCount:
-                        _messages.length + (_isLoading ? 1 : 0),
+                    itemCount: _messages.length + (_isLoading ? 1 : 0),
                     itemBuilder: (ctx, i) {
                       if (i == _messages.length) {
-                        return _buildTypingIndicator();
+                        return _buildTypingIndicator(bubbleBgColor);
                       }
-                      return _buildMessage(_messages[i]);
+                      return _buildMessage(
+                        _messages[i],
+                        bubbleBgColor,
+                        textColor,
+                      );
                     },
                   ),
           ),
-          _buildInputBar(),
+          _buildInputBar(inputBgColor),
         ],
       ),
     );
   }
 
-  Widget _buildEmptyState() {
-    return const Center(
+  Widget _buildEmptyState(Color textColor) {
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.eco, size: 64, color: Color(0xFF4CD964)),
-          SizedBox(height: 16),
-          Text("Agriscan AI",
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold)),
-          SizedBox(height: 8),
+          const Icon(Icons.eco, size: 64, color: Color(0xFF4CD964)),
+          const SizedBox(height: 16),
+          Text(
+            "Agriscan AI",
+            style: TextStyle(
+              color: textColor,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
           Text(
             "Prenez ou importez une photo\npour analyser vos plantes",
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white54, fontSize: 14),
+            style: TextStyle(color: textColor.withOpacity(0.5), fontSize: 14),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildMessage(Map<String, dynamic> message) {
+  Widget _buildMessage(
+    Map<String, dynamic> message,
+    Color bubbleBgColor,
+    Color textColor,
+  ) {
     final isUser = message['role'] == 'user';
     final isImage = message['type'] == 'image';
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(
-        mainAxisAlignment:
-            isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: isUser
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (!isUser) ...[
@@ -200,18 +204,24 @@ class _ChatPageState extends State<ChatPage> {
             child: Container(
               padding: isImage
                   ? EdgeInsets.zero
-                  : const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 12),
+                  : const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
                 color: isUser
                     ? const Color(0xFF4CD964).withOpacity(0.2)
-                    : const Color(0xFF2A2A2A),
+                    : bubbleBgColor,
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(16),
                   topRight: const Radius.circular(16),
                   bottomLeft: Radius.circular(isUser ? 16 : 4),
                   bottomRight: Radius.circular(isUser ? 4 : 16),
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: isImage
                   ? ClipRRect(
@@ -225,10 +235,11 @@ class _ChatPageState extends State<ChatPage> {
                     )
                   : Text(
                       message['content'],
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          height: 1.5),
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: 14,
+                        height: 1.5,
+                      ),
                     ),
             ),
           ),
@@ -238,7 +249,7 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  Widget _buildTypingIndicator() {
+  Widget _buildTypingIndicator(Color bubbleBgColor) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(
@@ -250,10 +261,9 @@ class _ChatPageState extends State<ChatPage> {
           ),
           const SizedBox(width: 8),
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: const Color(0xFF2A2A2A),
+              color: bubbleBgColor,
               borderRadius: BorderRadius.circular(16),
             ),
             child: const Row(
@@ -272,37 +282,46 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  Widget _buildInputBar() {
+  Widget _buildInputBar(Color inputBgColor) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: const BoxDecoration(
-        color: Color(0xFF2A2A2A),
-        border: Border(top: BorderSide(color: Colors.white12)),
+      decoration: BoxDecoration(
+        color: inputBgColor,
+        border: Border(top: BorderSide(color: Colors.grey.withOpacity(0.2))),
       ),
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.camera_alt_outlined,
-                color: Color(0xFF4CD964)),
+            icon: const Icon(
+              Icons.camera_alt_outlined,
+              color: Color(0xFF4CD964),
+            ),
             onPressed: () => _ajouterImage(ImageSource.camera),
           ),
           IconButton(
-            icon: const Icon(Icons.image_outlined,
-                color: Color(0xFF4CD964)),
+            icon: const Icon(Icons.image_outlined, color: Color(0xFF4CD964)),
             onPressed: () => _ajouterImage(ImageSource.gallery),
           ),
           Expanded(
             child: TextField(
               controller: _messageController,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(
+                color: Provider.of<ThemeProvider>(context).darkMode
+                    ? Colors.white
+                    : Colors.black87,
+              ),
               maxLines: null,
               decoration: InputDecoration(
                 hintText: "Posez votre question...",
-                hintStyle: const TextStyle(color: Colors.white38),
+                hintStyle: const TextStyle(color: Colors.grey),
                 filled: true,
-                fillColor: const Color(0xFF3A3A3A),
+                fillColor: Provider.of<ThemeProvider>(context).darkMode
+                    ? const Color(0xFF3A3A3A)
+                    : Colors.grey[300],
                 contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 10),
+                  horizontal: 16,
+                  vertical: 10,
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24),
                   borderSide: BorderSide.none,
@@ -320,8 +339,7 @@ class _ChatPageState extends State<ChatPage> {
                 color: Color(0xFF4CD964),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.send,
-                  color: Colors.white, size: 20),
+              child: const Icon(Icons.send, color: Colors.white, size: 20),
             ),
           ),
         ],
@@ -330,7 +348,6 @@ class _ChatPageState extends State<ChatPage> {
   }
 }
 
-// ── Indicateur de frappe animé ─────────────────────────────────
 class _DotIndicator extends StatefulWidget {
   final int delay;
   const _DotIndicator({required this.delay});

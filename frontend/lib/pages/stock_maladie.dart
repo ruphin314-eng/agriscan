@@ -90,7 +90,17 @@ class StockPlante extends StatelessWidget {
         nom: "Nécrose du bourgeon des racines",
         image: "assets/images/cassava-bud-necrosis-manioc-1.jpg",
         description:
-            "Nécrose du bourgeon (tiges et yeux)\n-  Zones brunes ou grises éparpillées à la surface des tiges, correspondant à des masses fongiques qui se développent sur l’épiderme ; ces croûtes peuvent apparaître aussi sur les feuilles.\n-  Les tissus sous ces zones se nécrosent, les bourgeons (yeux) sont recouverts puis meurent, ce qui réduit fortement le pouvoir germinatif des boutures et donne des levées faibles ou irrégulières.",
+            "La cercosporiose noire, aussi appelée maladie des raies noires, est une maladie fongique très destructive du bananier et du plantain causée par le champignon Mycosphaerella fijiensis.\n"
+            "Elle attaque principalement les feuilles et réduit fortement la photosynthèse, ce qui entraîne une baisse importante du rendement et une maturation précoce des fruits.\n\n"
+            "Les premiers symptômes apparaissent sous forme de petites stries brun foncé ou noires sur les feuilles, surtout les plus âgées. Ces stries s’allongent progressivement pour former des taches noires entourées d’un halo jaune.\n"
+            "Avec le temps, les lésions fusionnent et provoquent le dessèchement complet des feuilles.\n\n"
+            "Les plants fortement atteints présentent :\n"
+            "- Un jaunissement rapide des feuilles\n"
+            "- Une réduction de la surface foliaire verte\n"
+            "- Des régimes plus petits\n"
+            "- Une maturation prématurée des fruits\n"
+            "- Une forte diminution du rendement\n\n"
+            "La maladie se développe rapidement dans les zones chaudes et humides, particulièrement lorsque les plantations sont trop denses et mal aérées. Les spores du champignon sont disséminées par le vent et les gouttes de pluie.",
         solution:
             "-  Prélever les boutures uniquement sur des tiges saines : sans croûtes brunes/grises, sans bourgeons noirs ou morts.\n-  Après récolte, ramasser et brûler les tiges fortement atteintes, ne pas les laisser dans le champ ni les utiliser comme matériel de plantation.\n-  Éviter les parcelles très humides et trop denses, afin de réduire l’humidité sur les tiges et la pression de maladie.\n\nIl n’existe pas de traitement curatif fiable au champ pour la nécrose du bourgeon ni pour les nécroses racinaires : les produits fongicides ou bactéricides ne résolvent pas le problème une fois les tissus internes atteints.\nLa gestion consiste à : arracher et détruire les plants très touchés, ne pas garder de boutures provenant de ces plants, et réorganiser la parcelle (rotation, variétés plus tolérantes, meilleure gestion de l’eau).",
       ),
@@ -136,83 +146,143 @@ class StockPlante extends StatelessWidget {
     ],
   };
 
+  IconData _getPlantIcon(String plantName) {
+    switch (plantName) {
+      case "Maïs":
+        return Icons.agriculture_outlined;
+      case "Manioc":
+        return Icons.spa_outlined;
+      case "Banane/Plantain":
+        return Icons.eco_outlined;
+      default:
+        return Icons.eco_outlined;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Stock des Plantes"), centerTitle: true),
-      body: ListView(
-        children: stock.entries.map((plante) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 🔹 Titre plante
-              Padding(
-                padding: const EdgeInsets.symmetric(
+      appBar: AppBar(
+        title: const Text("Stock des Plantes"),
+        centerTitle: true,
+        backgroundColor: Colors.green[700],
+        foregroundColor: Colors.white,
+        elevation: 4,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Colors.white, Color(0xFFE8F5E8)],
+          ),
+        ),
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: stock.entries.map((plante) {
+            return Card(
+              margin: const EdgeInsets.only(bottom: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              elevation: 6,
+              child: ExpansionTile(
+                key: PageStorageKey(plante.key),
+                maintainState: true,
+                tilePadding: const EdgeInsets.symmetric(
                   horizontal: 16,
-                  vertical: 12,
+                  vertical: 8,
                 ),
-                child: Text(
+                childrenPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                leading: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.green[50],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.all(8),
+                  child: Icon(
+                    _getPlantIcon(plante.key),
+                    color: Colors.green[700],
+                    size: 28,
+                  ),
+                ),
+                title: Text(
                   plante.key,
                   style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
+                    color: Colors.black87,
                   ),
                 ),
-              ),
-
-              // 🔹 Maladies (COLUMN)
-              ...plante.value.map((maladie) {
-                return GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => DetailMaladie(maladie: maladie),
-                      ),
-                    );
-                  },
-                  child: Card(
-                    margin: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    elevation: 4,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ClipRRect(
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(16),
-                            topRight: Radius.circular(16),
-                          ),
-                          child: Image.asset(
-                            maladie.image,
-                            height: 180,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                          ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                collapsedBackgroundColor: Colors.white,
+                backgroundColor: Colors.green[50],
+                children: plante.value.map((maladie) {
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => DetailMaladie(maladie: maladie),
                         ),
-                        Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Text(
-                            maladie.nom,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
+                      );
+                    },
+                    child: Card(
+                      margin: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 3,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Hero(
+                            tag: maladie.image,
+                            child: ClipRRect(
+                              borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(12),
+                                topRight: Radius.circular(12),
+                              ),
+                              child: Image.asset(
+                                maladie.image,
+                                height: 200,
+                                width: double.infinity,
+                                fit: BoxFit.cover,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                          Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Text(
+                              maladie.nom,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                );
-              }),
-            ],
-          );
-        }).toList(),
+                  );
+                }).toList(),
+              ),
+            );
+          }).toList(),
+        ),
       ),
     );
   }

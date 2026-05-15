@@ -1,8 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthStorage {
-
-  static const String _keyToken  = 'token';
+  static const String _keyToken = 'token';
   static const String _keyUserId = 'userId';
 
   static Future<void> save(int userId, String token) async {

@@ -40,10 +40,12 @@ dependencies:
   http: ^1.2.0
   email_validator: ^2.1.17
  
+ 
 
   flutter_localizations:
     sdk: flutter
   shared_preferences: ^2.5.5
+  provider: 6.1.2
   
 
 dev_dependencies:
