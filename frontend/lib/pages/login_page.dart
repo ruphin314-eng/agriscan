@@ -1,5 +1,7 @@
 import 'package:agriscan/pages/chat_page.dart';
 import 'package:agriscan/pages/home_pages.dart';
+import 'package:agriscan/pages/main_page.dart';
+import 'package:agriscan/services/api_config.dart';
 import 'package:agriscan/services/auth_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -21,15 +23,13 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController passwordController = TextEditingController();
   bool loading = false;
 
-  static const String baseUrl = 'http://10.0.2.2:8080';
-
   Future<void> login() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => loading = true);
 
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/api/auth/login'),
+        Uri.parse(ApiConfig.login), // ✅
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'email': emailController.text.trim(),
@@ -42,7 +42,6 @@ class _LoginPageState extends State<LoginPage> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         await AuthStorage.save(data['id'], data['token']);
-
         if (!mounted) return;
 
         if (widget.redirectImagePath != null) {
@@ -55,13 +54,13 @@ class _LoginPageState extends State<LoginPage> {
         } else {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (_) => const HomePage()),
+            MaterialPageRoute(builder: (_) => const MainPage()),
           );
         }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Erreur : ${response.body}")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Erreur : ${response.body}")));
       }
     } catch (e) {
       if (!mounted) return;
@@ -94,15 +93,21 @@ class _LoginPageState extends State<LoginPage> {
                         children: [
                           GestureDetector(
                             onTap: () => Navigator.maybePop(context),
-                            child: const Icon(Icons.arrow_back,
-                                color: Colors.white, size: 24),
+                            child: const Icon(
+                              Icons.arrow_back,
+                              color: Colors.white,
+                              size: 24,
+                            ),
                           ),
                           const SizedBox(width: 16),
-                          const Text('Sign in',
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.bold)),
+                          const Text(
+                            'Sign in',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 26,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 40),
@@ -134,9 +139,13 @@ class _LoginPageState extends State<LoginPage> {
                               builder: (_) => const ForgotPasswordPage(),
                             ),
                           ),
-                          child: const Text('Mot de passe oublié ?',
-                              style: TextStyle(
-                                  color: Color(0xFF4CD964), fontSize: 13)),
+                          child: const Text(
+                            'Mot de passe oublié ?',
+                            style: TextStyle(
+                              color: Color(0xFF4CD964),
+                              fontSize: 13,
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -145,9 +154,10 @@ class _LoginPageState extends State<LoginPage> {
                       _orDivider(),
                       const SizedBox(height: 20),
                       const Center(
-                        child: Text('Sign in with',
-                            style: TextStyle(
-                                color: Colors.white70, fontSize: 14)),
+                        child: Text(
+                          'Sign in with',
+                          style: TextStyle(color: Colors.white70, fontSize: 14),
+                        ),
                       ),
                       const SizedBox(height: 20),
                       _socialButtons(),
@@ -157,19 +167,23 @@ class _LoginPageState extends State<LoginPage> {
                           onTap: () => Navigator.push(
                             context,
                             MaterialPageRoute(
-                                builder: (_) => const RegisterPage()),
+                              builder: (_) => const RegisterPage(),
+                            ),
                           ),
                           child: RichText(
                             text: const TextSpan(
                               text: "Don't have an account? ",
                               style: TextStyle(
-                                  color: Colors.white70, fontSize: 14),
+                                color: Colors.white70,
+                                fontSize: 14,
+                              ),
                               children: [
                                 TextSpan(
                                   text: 'Sign up',
                                   style: TextStyle(
-                                      color: Color(0xFF4CD964),
-                                      fontWeight: FontWeight.w600),
+                                    color: Color(0xFF4CD964),
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ],
                             ),
@@ -185,11 +199,14 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  Widget _label(String text) => Text(text,
-      style: const TextStyle(
-          color: Colors.white,
-          fontSize: 14,
-          fontWeight: FontWeight.w400));
+  Widget _label(String text) => Text(
+    text,
+    style: const TextStyle(
+      color: Colors.white,
+      fontSize: 14,
+      fontWeight: FontWeight.w400,
+    ),
+  );
 
   Widget _inputField({
     required TextEditingController controller,
@@ -204,24 +221,26 @@ class _LoginPageState extends State<LoginPage> {
       validator: validator,
       style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
         enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide:
-                const BorderSide(color: Colors.white54, width: 1)),
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Colors.white54, width: 1),
+        ),
         focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide:
-                const BorderSide(color: Colors.white, width: 1.5)),
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Colors.white, width: 1.5),
+        ),
         errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide:
-                const BorderSide(color: Colors.redAccent, width: 1)),
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Colors.redAccent, width: 1),
+        ),
         focusedErrorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide:
-                const BorderSide(color: Colors.redAccent, width: 1.5)),
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Colors.redAccent, width: 1.5),
+        ),
         errorStyle: const TextStyle(color: Colors.redAccent),
         filled: true,
         fillColor: Colors.transparent,
@@ -248,28 +267,36 @@ class _LoginPageState extends State<LoginPage> {
             backgroundColor: Colors.transparent,
             shadowColor: Colors.transparent,
             shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10)),
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
-          child: Text(label,
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600)),
+          child: Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ),
       ),
     );
   }
 
   Widget _orDivider() {
-    return Row(children: [
-      Expanded(child: Container(height: 1, color: Colors.white24)),
-      const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 16),
-        child: Text('Or',
-            style: TextStyle(color: Colors.white60, fontSize: 14)),
-      ),
-      Expanded(child: Container(height: 1, color: Colors.white24)),
-    ]);
+    return Row(
+      children: [
+        Expanded(child: Container(height: 1, color: Colors.white24)),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16),
+          child: Text(
+            'Or',
+            style: TextStyle(color: Colors.white60, fontSize: 14),
+          ),
+        ),
+        Expanded(child: Container(height: 1, color: Colors.white24)),
+      ],
+    );
   }
 
   Widget _socialButtons() {
@@ -281,8 +308,9 @@ class _LoginPageState extends State<LoginPage> {
           width: 52,
           height: 52,
           decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8)),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+          ),
         );
       }),
     );

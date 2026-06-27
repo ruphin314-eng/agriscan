@@ -36,21 +36,22 @@ class ThemeProvider extends ChangeNotifier {
       unselectedItemColor: Colors.white,
     ),
     cardTheme: CardThemeData(
-      // ✅ CardThemeData
       color: Colors.white,
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape:
+      RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ),
     switchTheme: SwitchThemeData(
       thumbColor: WidgetStateProperty.resolveWith(
-        (states) => states.contains(WidgetState.selected)
+            (states) => states.contains(WidgetState.selected)
             ? const Color(0xFF4CD964)
             : Colors.grey,
       ),
       trackColor: WidgetStateProperty.resolveWith(
-        (states) => states.contains(WidgetState.selected)
-            ? const Color(0xFF4CD964).withOpacity(0.4)
-            : Colors.grey.withOpacity(0.4),
+            (states) => states.contains(WidgetState.selected)
+        // ✅ withValues à la place de withOpacity
+            ? const Color(0xFF4CD964).withValues(alpha: 0.4)
+            : Colors.grey.withValues(alpha: 0.4),
       ),
     ),
     colorScheme: ColorScheme.fromSeed(
@@ -75,21 +76,22 @@ class ThemeProvider extends ChangeNotifier {
       unselectedItemColor: Colors.white54,
     ),
     cardTheme: CardThemeData(
-      // ✅ CardThemeData
       color: const Color(0xFF2A2A2A),
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape:
+      RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ),
     switchTheme: SwitchThemeData(
       thumbColor: WidgetStateProperty.resolveWith(
-        (states) => states.contains(WidgetState.selected)
+            (states) => states.contains(WidgetState.selected)
             ? const Color(0xFF4CD964)
             : Colors.grey,
       ),
       trackColor: WidgetStateProperty.resolveWith(
-        (states) => states.contains(WidgetState.selected)
-            ? const Color(0xFF4CD964).withOpacity(0.4)
-            : Colors.grey.withOpacity(0.4),
+            (states) => states.contains(WidgetState.selected)
+        // ✅ withValues à la place de withOpacity
+            ? const Color(0xFF4CD964).withValues(alpha: 0.4)
+            : Colors.grey.withValues(alpha: 0.4),
       ),
     ),
     colorScheme: ColorScheme.fromSeed(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'login_page.dart';
+import 'package:agriscan/services/api_config.dart';
 
 class ResetPasswordPage extends StatefulWidget {
   final String email;
@@ -18,7 +19,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
   final confirmPasswordController = TextEditingController();
   bool loading = false;
 
-  static const String baseUrl = 'http://10.0.2.2:8080';
+  // static const String baseUrl = 'http://10.0.2.2:8080';
 
   Future<void> reinitialiser() async {
     if (!_formKey.currentState!.validate()) return;
@@ -26,7 +27,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
 
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/api/auth/reset-password'),
+        Uri.parse(ApiConfig.resetPassword),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'token': codeController.text.trim(),
@@ -50,15 +51,14 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
           (route) => false,
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Erreur : ${response.body}")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Erreur : ${response.body}")));
       }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text("Impossible de joindre le serveur")),
+        const SnackBar(content: Text("Impossible de joindre le serveur")),
       );
     } finally {
       if (mounted) setState(() => loading = false);
@@ -71,8 +71,8 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
       backgroundColor: Colors.black,
       body: loading
           ? const Center(
-              child:
-                  CircularProgressIndicator(color: Color(0xFF4CD964)))
+              child: CircularProgressIndicator(color: Color(0xFF4CD964)),
+            )
           : SafeArea(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -88,15 +88,21 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                         children: [
                           GestureDetector(
                             onTap: () => Navigator.pop(context),
-                            child: const Icon(Icons.arrow_back,
-                                color: Colors.white, size: 24),
+                            child: const Icon(
+                              Icons.arrow_back,
+                              color: Colors.white,
+                              size: 24,
+                            ),
                           ),
                           const SizedBox(width: 16),
-                          const Text("Réinitialisation",
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.bold)),
+                          const Text(
+                            "Réinitialisation",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 26,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ],
                       ),
 
@@ -105,7 +111,9 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                       Text(
                         "Code envoyé à ${widget.email}",
                         style: const TextStyle(
-                            color: Colors.white60, fontSize: 14),
+                          color: Colors.white60,
+                          fontSize: 14,
+                        ),
                       ),
 
                       const SizedBox(height: 40),
@@ -129,9 +137,8 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                       _inputField(
                         controller: newPasswordController,
                         obscureText: true,
-                        validator: (v) => v!.length < 6
-                            ? "6 caractères minimum"
-                            : null,
+                        validator: (v) =>
+                            v!.length < 6 ? "6 caractères minimum" : null,
                       ),
 
                       const SizedBox(height: 20),
@@ -142,10 +149,9 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                       _inputField(
                         controller: confirmPasswordController,
                         obscureText: true,
-                        validator: (v) =>
-                            v != newPasswordController.text
-                                ? "Les mots de passe ne correspondent pas"
-                                : null,
+                        validator: (v) => v != newPasswordController.text
+                            ? "Les mots de passe ne correspondent pas"
+                            : null,
                       ),
 
                       const SizedBox(height: 32),
@@ -157,10 +163,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                         child: DecoratedBox(
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
-                              colors: [
-                                Color(0xFF2D8B3A),
-                                Color(0xFF4CD964)
-                              ],
+                              colors: [Color(0xFF2D8B3A), Color(0xFF4CD964)],
                               begin: Alignment.centerLeft,
                               end: Alignment.centerRight,
                             ),
@@ -172,15 +175,17 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                               backgroundColor: Colors.transparent,
                               shadowColor: Colors.transparent,
                               shape: RoundedRectangleBorder(
-                                  borderRadius:
-                                      BorderRadius.circular(10)),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
                             ),
                             child: const Text(
-                                "Réinitialiser le mot de passe",
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600)),
+                              "Réinitialiser le mot de passe",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -192,11 +197,14 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
     );
   }
 
-  Widget _label(String text) => Text(text,
-      style: const TextStyle(
-          color: Colors.white,
-          fontSize: 14,
-          fontWeight: FontWeight.w400));
+  Widget _label(String text) => Text(
+    text,
+    style: const TextStyle(
+      color: Colors.white,
+      fontSize: 14,
+      fontWeight: FontWeight.w400,
+    ),
+  );
 
   Widget _inputField({
     required TextEditingController controller,
@@ -211,24 +219,26 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
       validator: validator,
       style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
         enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide:
-                const BorderSide(color: Colors.white54, width: 1)),
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Colors.white54, width: 1),
+        ),
         focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide:
-                const BorderSide(color: Colors.white, width: 1.5)),
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Colors.white, width: 1.5),
+        ),
         errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(
-                color: Colors.redAccent, width: 1)),
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Colors.redAccent, width: 1),
+        ),
         focusedErrorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(
-                color: Colors.redAccent, width: 1.5)),
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Colors.redAccent, width: 1.5),
+        ),
         errorStyle: const TextStyle(color: Colors.redAccent),
         filled: true,
         fillColor: Colors.transparent,

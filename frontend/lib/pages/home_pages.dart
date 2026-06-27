@@ -1,79 +1,16 @@
 import 'package:agriscan/pages/chat_page.dart';
-import 'package:agriscan/pages/histor_page.dart';
 import 'package:agriscan/pages/login_page.dart';
-import 'package:agriscan/pages/profile.dart';
 import 'package:agriscan/pages/stock_maladie.dart';
 import 'package:agriscan/services/auth_storage.dart';
-import 'package:agriscan/services/theme_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:provider/provider.dart';
 
-class HomePage extends StatelessWidget {
-  const HomePage({super.key});
+// ── HomePage supprimée, remplacée par MainPage ──
+// HomeContent devient public (sans _)
 
-  @override
-  Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final darkMode = themeProvider.darkMode;
+class HomeContent extends StatelessWidget {
+  const HomeContent({super.key});
 
-    return Scaffold(
-      // ── Navbar ───────────────────────────────────────────────
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 0,
-        backgroundColor: darkMode
-            ? const Color(0xFF1E1E1E)
-            : const Color.fromARGB(255, 14, 15, 14),
-        selectedItemColor: Colors.greenAccent,
-        unselectedItemColor: Colors.white54,
-        onTap: (index) async {
-          if (index == 1) {
-            // ── Historique ──────────────────────────────────
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const HistoryPage()),
-            );
-          } else if (index == 2) {
-            // ── Compte ──────────────────────────────────────
-            final isLoggedIn = await AuthStorage.isLoggedIn();
-            if (!context.mounted) return;
-
-            if (isLoggedIn) {
-              final userId = await AuthStorage.getUserId();
-              final token = await AuthStorage.getToken();
-              if (!context.mounted) return;
-
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ProfilePage(userId: userId!, token: token!),
-                ),
-              );
-            } else {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const LoginPage()),
-              );
-            }
-          }
-        },
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Accueil'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.access_time),
-            label: 'Historique',
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Compte'),
-        ],
-      ),
-
-      // ── Contenu ──────────────────────────────────────────────
-      body: _HomeContent(),
-    );
-  }
-}
-
-class _HomeContent extends StatelessWidget {
   Future<void> _handleImage(BuildContext context, ImageSource source) async {
     final picker = ImagePicker();
     final image = await picker.pickImage(source: source, imageQuality: 80);
