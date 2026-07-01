@@ -200,6 +200,55 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void logout() async {
+    // ✅ Dialogue de confirmation
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.logout, color: Colors.redAccent, size: 24),
+            SizedBox(width: 8),
+            Text(
+              'Déconnexion',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: const Text(
+          'Êtes-vous sûr de vouloir vous déconnecter ?',
+          style: TextStyle(fontSize: 15),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text(
+              'Annuler',
+              style: TextStyle(color: Colors.grey, fontSize: 15),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text(
+              'Se déconnecter',
+              style: TextStyle(color: Colors.white, fontSize: 15),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    // Si l'utilisateur a annulé, on ne fait rien
+    if (confirmed != true) return;
+
     await AuthStorage.clear();
     if (!mounted) return;
     Navigator.pushAndRemoveUntil(

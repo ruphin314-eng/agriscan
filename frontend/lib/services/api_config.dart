@@ -23,4 +23,7 @@ class ApiConfig {
   static String conversation(int id) => '$baseUrl/api/conversations/$id';
   static String ajouterMessage(int id) =>
       '$baseUrl/api/conversations/$id/messages';
+
+  // ✅ Analyse image maïs
+  static const String analyseImage = '$baseUrl/api/analyse';
 }
