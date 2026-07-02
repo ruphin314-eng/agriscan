@@ -174,7 +174,7 @@ class _ChatPageState extends State<ChatPage> {
       );
 
       final streamedResponse =
-      await request.send().timeout(const Duration(seconds: 60));
+      await request.send().timeout(const Duration(seconds: 180));
       final response =
       await http.Response.fromStream(streamedResponse);
 

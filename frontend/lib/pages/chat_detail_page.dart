@@ -82,96 +82,108 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
           overflow: TextOverflow.ellipsis,
         ),
       ),
-
       body: _loading
           ? const Center(
-              child: CircularProgressIndicator(color: Color(0xFF4CD964)),
-            )
+        child: CircularProgressIndicator(color: Color(0xFF4CD964)),
+      )
           : _messages.isEmpty
           ? Center(
-              child: Text("Aucun message", style: TextStyle(color: textColor)),
-            )
+        child: Text(
+          'Aucun message',
+          style: TextStyle(color: textColor),
+        ),
+      )
           : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _messages.length,
-              itemBuilder: (ctx, i) {
-                final msg = _messages[i];
-                final isUser = msg['role'] == 'user';
-                final isImage = msg['type'] == 'image';
+        padding: const EdgeInsets.all(16),
+        itemCount: _messages.length,
+        itemBuilder: (ctx, i) {
+          final msg = _messages[i];
+          final isUser = msg['role'] == 'user';
+          final isImage = msg['type'] == 'image';
 
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: Row(
-                    mainAxisAlignment: isUser
-                        ? MainAxisAlignment.end
-                        : MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (!isUser) ...[
-                        const CircleAvatar(
-                          radius: 16,
-                          backgroundColor: Color(0xFF4CD964),
-                          child: Icon(Icons.eco, size: 18, color: Colors.white),
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Row(
+              mainAxisAlignment: isUser
+                  ? MainAxisAlignment.end
+                  : MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (!isUser) ...[
+                  // ✅ Icône maïs cohérente avec chat_page
+                  const CircleAvatar(
+                    radius: 16,
+                    backgroundColor: Color(0xFF4CD964),
+                    child: Text('🌽',
+                        style: TextStyle(fontSize: 14)),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                Flexible(
+                  child: Container(
+                    padding: isImage
+                        ? EdgeInsets.zero
+                        : const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      // ✅ withValues à la place de withOpacity
+                      color: isUser
+                          ? const Color(0xFF4CD964)
+                          .withValues(alpha: 0.2)
+                          : bubbleBg,
+                      borderRadius: BorderRadius.only(
+                        topLeft: const Radius.circular(16),
+                        topRight: const Radius.circular(16),
+                        bottomLeft:
+                        Radius.circular(isUser ? 16 : 4),
+                        bottomRight:
+                        Radius.circular(isUser ? 4 : 16),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          // ✅ withValues à la place de withOpacity
+                          color: Colors.black
+                              .withValues(alpha: 0.05),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
                         ),
-                        const SizedBox(width: 8),
                       ],
-                      Flexible(
-                        child: Container(
-                          padding: isImage
-                              ? EdgeInsets.zero
-                              : const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 12,
-                                ),
-                          decoration: BoxDecoration(
-                            color: isUser
-                                ? const Color(0xFF4CD964).withOpacity(0.2)
-                                : bubbleBg,
-                            borderRadius: BorderRadius.only(
-                              topLeft: const Radius.circular(16),
-                              topRight: const Radius.circular(16),
-                              bottomLeft: Radius.circular(isUser ? 16 : 4),
-                              bottomRight: Radius.circular(isUser ? 4 : 16),
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: isImage && msg['imageUrl'] != null
-                              ? ClipRRect(
-                                  borderRadius: BorderRadius.circular(16),
-                                  child: Image.network(
-                                    msg['imageUrl'],
-                                    width: 220,
-                                    height: 220,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => const Icon(
-                                      Icons.image,
-                                      size: 80,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
-                                )
-                              : Text(
-                                  msg['contenu'] ?? '',
-                                  style: TextStyle(
-                                    color: textColor,
-                                    fontSize: 14,
-                                    height: 1.5,
-                                  ),
-                                ),
+                    ),
+                    child: isImage && msg['imageUrl'] != null
+                        ? ClipRRect(
+                      borderRadius:
+                      BorderRadius.circular(16),
+                      child: Image.network(
+                        msg['imageUrl'],
+                        width: 220,
+                        height: 220,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) =>
+                        const Icon(
+                          Icons.image,
+                          size: 80,
+                          color: Colors.grey,
                         ),
                       ),
-                      if (isUser) const SizedBox(width: 8),
-                    ],
+                    )
+                        : Text(
+                      msg['contenu'] ?? '',
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: 14,
+                        height: 1.5,
+                      ),
+                    ),
                   ),
-                );
-              },
+                ),
+                if (isUser) const SizedBox(width: 8),
+              ],
             ),
+          );
+        },
+      ),
     );
   }
 }
