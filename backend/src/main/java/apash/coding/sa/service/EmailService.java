@@ -1,31 +1,62 @@
-// service/EmailService.java
 package apash.coding.sa.service;
 
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 
 @Service
 public class EmailService {
 
-    private final JavaMailSender mailSender;
+    @Value("${brevo.api.key}")
+    private String brevoApiKey;
 
-    public EmailService(JavaMailSender mailSender) {
-        this.mailSender = mailSender;
-    }
+    @Value("${brevo.sender.email:agriscantech@gmail.com}")
+    private String senderEmail;
 
-    public void envoyerResetPassword(String email, String token) {
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setTo(email);
-        message.setSubject("Réinitialisation de votre mot de passe — Agriscan");
-        message.setText(
-            "Bonjour,\n\n" +
-            "Vous avez demandé une réinitialisation de mot de passe.\n\n" +
-            "Votre code de réinitialisation : " + token + "\n\n" +
-            "Ce code expire dans 15 minutes.\n\n" +
-            "Si vous n'avez pas fait cette demande, ignorez cet email.\n\n" +
-            "— L'équipe Agriscan"
-        );
-        mailSender.send(message);
+    @Value("${brevo.sender.name:Agriscan}")
+    private String senderName;
+
+    private final HttpClient httpClient = HttpClient.newHttpClient();
+
+    public void envoyerResetPassword(String email, String code) {
+        String body = """
+            {
+                "sender": {
+                    "email": "%s",
+                    "name": "%s"
+                },
+                "to": [{"email": "%s"}],
+                "subject": "Réinitialisation de votre mot de passe — Agriscan",
+                "textContent": "Bonjour,\\n\\nVous avez demandé une réinitialisation de mot de passe.\\n\\nVotre code de réinitialisation : %s\\n\\nCe code expire dans 15 minutes.\\n\\nSi vous n'avez pas fait cette demande, ignorez cet email.\\n\\n— L'équipe Agriscan"
+            }
+            """.formatted(senderEmail, senderName, email, code);
+
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://api.brevo.com/v3/smtp/email"))
+                    .header("accept", "application/json")
+                    .header("api-key", brevoApiKey)
+                    .header("content-type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(body))
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(
+                    request,
+                    HttpResponse.BodyHandlers.ofString()
+            );
+
+            if (response.statusCode() != 201) {
+                throw new RuntimeException(
+                        "Erreur envoi email Brevo : " + response.body()
+                );
+            }
+
+        } catch (Exception e) {
+            throw new RuntimeException("Impossible d'envoyer l'email : " + e.getMessage());
+        }
     }
 }

@@ -33,7 +33,12 @@ public class SecurityConfig {
             )
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
+                    .requestMatchers("/api/conversations/**").permitAll()
                 .requestMatchers("/actuator/**").permitAll()
+                    // ✅ Autoriser l'accès public aux photos uploadées
+                    .requestMatchers("/uploads/photos/**").permitAll()
+                    // ✅ Autoriser l'endpoint d'analyse (optionnel si JWT requis)
+                    .requestMatchers("/api/analyse/**").permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
