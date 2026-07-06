@@ -178,6 +178,9 @@ class _ChatPageState extends State<ChatPage> {
       final response =
       await http.Response.fromStream(streamedResponse);
 
+      debugPrint('STATUS: ${response.statusCode}');
+      debugPrint('BODY: ${response.body}');
+
       if (response.statusCode == 200 || response.statusCode == 201) {
         // ✅ Analyse réussie
         final data = jsonDecode(response.body);

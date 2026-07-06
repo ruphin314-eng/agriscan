@@ -1,4 +1,6 @@
-# Module 01 — `services/api_config.dart`
+[^1]
+
+[^1]: Footnote details# Module 01 — `services/api_config.dart`
 
 ## À quoi sert ce fichier ?
 

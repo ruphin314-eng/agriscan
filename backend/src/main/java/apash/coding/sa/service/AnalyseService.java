@@ -72,8 +72,7 @@ public class AnalyseService {
         String requestBody = objectMapper.writeValueAsString(Map.of(
                 "images", List.of("data:image/jpeg;base64," + imageBase64),
                 "latitude", 0.0,
-                "longitude", 0.0,
-                "similar_images", false
+                "longitude", 0.0
         ));
 
         // 3. Appeler l'API crop.health
