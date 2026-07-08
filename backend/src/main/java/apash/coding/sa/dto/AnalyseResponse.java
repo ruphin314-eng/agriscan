@@ -53,6 +53,7 @@ public class AnalyseResponse {
         private String nomScientifique;
         private double probabilite; // 0.0 à 1.0
         private String gravite;     // Faible / Modérée / Élevée
+        private Treatment treatment; // ✅ Traitement fourni par crop.health
 
         public MaladieDetectee() {}
 
@@ -75,5 +76,32 @@ public class AnalyseResponse {
 
         public String getGravite() { return gravite; }
         public void setGravite(String gravite) { this.gravite = gravite; }
+
+        public Treatment getTreatment() { return treatment; }
+        public void setTreatment(Treatment treatment) { this.treatment = treatment; }
+    }
+
+    // ── Classe interne : traitement (biologique / chimique / prévention) ─────
+    public static class Treatment {
+        private List<String> biological;
+        private List<String> chemical;
+        private List<String> prevention;
+
+        public Treatment() {}
+
+        public Treatment(List<String> biological, List<String> chemical, List<String> prevention) {
+            this.biological = biological;
+            this.chemical = chemical;
+            this.prevention = prevention;
+        }
+
+        public List<String> getBiological() { return biological; }
+        public void setBiological(List<String> biological) { this.biological = biological; }
+
+        public List<String> getChemical() { return chemical; }
+        public void setChemical(List<String> chemical) { this.chemical = chemical; }
+
+        public List<String> getPrevention() { return prevention; }
+        public void setPrevention(List<String> prevention) { this.prevention = prevention; }
     }
 }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:agriscan/services/api_config.dart';
 import 'package:agriscan/services/auth_storage.dart';
 import 'package:agriscan/services/theme_provider.dart';
@@ -28,6 +29,15 @@ class _ChatPageState extends State<ChatPage> {
   // Résultat de la dernière analyse (pour donner les solutions si demandé)
   Map<String, dynamic>? _dernierResultatAnalyse;
 
+  // ── Zone de "staging" multi-photos ─────────────────────────
+  static const int _minPhotos = 2;
+  static const int _maxPhotos = 5;
+  final List<String> _photosEnAttente = [];
+
+  // ── Bandeau conseil de cadrage ──────────────────────────────
+  bool _showBanner = true;
+  Timer? _bannerTimer;
+
   static String _getSaisonCourante() {
     final month = DateTime.now().month;
     if (month >= 3 && month <= 5) return 'Printemps';
@@ -39,21 +49,23 @@ class _ChatPageState extends State<ChatPage> {
   @override
   void initState() {
     super.initState();
+    // La 1ère photo (venant de HomePage) est mise en attente,
+    // PAS analysée immédiatement : il faut au moins 2 photos.
     if (widget.imagePath != null) {
-      _messages.add({
-        'role': 'user',
-        'type': 'image',
-        'imagePath': widget.imagePath,
-        'contenu': '',
-      });
-      _analyserImage(widget.imagePath!);
+      _photosEnAttente.add(widget.imagePath!);
     }
+
+    // Le bandeau conseil disparaît tout seul après 5 minutes
+    _bannerTimer = Timer(const Duration(minutes: 5), () {
+      if (mounted) setState(() => _showBanner = false);
+    });
   }
 
   @override
   void dispose() {
     _messageController.dispose();
     _scrollController.dispose();
+    _bannerTimer?.cancel();
     super.dispose();
   }
 
@@ -142,8 +154,52 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
-  // ── Analyser l'image via le backend ───────────────────────
-  Future<void> _analyserImage(String imagePath) async {
+  // ── Ajouter une photo à la zone d'attente (pas d'analyse) ──
+  Future<void> _ajouterPhotoEnAttente(ImageSource source) async {
+    if (_photosEnAttente.length >= _maxPhotos) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Maximum 5 photos par analyse.')),
+      );
+      return;
+    }
+
+    final picker = ImagePicker();
+    final image = await picker.pickImage(source: source, imageQuality: 80);
+    if (image == null) return;
+
+    setState(() {
+      _photosEnAttente.add(image.path);
+    });
+  }
+
+  void _retirerPhotoEnAttente(int index) {
+    setState(() {
+      _photosEnAttente.removeAt(index);
+    });
+  }
+
+  // ── Lancer l'analyse groupée (2 à 5 photos en 1 seule requête) ──
+  Future<void> _lancerAnalyse() async {
+    if (_photosEnAttente.length < _minPhotos) return;
+
+    final photos = List<String>.from(_photosEnAttente);
+
+    setState(() {
+      _messages.add({
+        'role': 'user',
+        'type': 'image',
+        'imagePaths': photos,
+        'contenu': '',
+      });
+      _photosEnAttente.clear();
+    });
+    _scrollToBottom();
+
+    await _analyserImages(photos);
+  }
+
+  // ── Analyser les images via le backend (multi-images = 1 crédit) ──
+  Future<void> _analyserImages(List<String> imagePaths) async {
     setState(() => _isLoading = true);
     _scrollToBottom();
 
@@ -151,7 +207,6 @@ class _ChatPageState extends State<ChatPage> {
       final token = await AuthStorage.getToken();
       final userId = await AuthStorage.getUserId();
 
-      // Construire la requête multipart
       final request = http.MultipartRequest(
         'POST',
         Uri.parse(ApiConfig.analyseImage +
@@ -162,16 +217,19 @@ class _ChatPageState extends State<ChatPage> {
         request.headers['Authorization'] = 'Bearer $token';
       }
 
-      final extension = imagePath.split('.').last.toLowerCase();
-      final mimeType = extension == 'png' ? 'png' : 'jpeg';
+      // ✅ Toutes les photos sont ajoutées sous le même champ "images"
+      for (final path in imagePaths) {
+        final extension = path.split('.').last.toLowerCase();
+        final mimeType = extension == 'png' ? 'png' : 'jpeg';
 
-      request.files.add(
-        await http.MultipartFile.fromPath(
-          'image',
-          imagePath,
-          contentType: MediaType('image', mimeType),
-        ),
-      );
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'images',
+            path,
+            contentType: MediaType('image', mimeType),
+          ),
+        );
+      }
 
       final streamedResponse =
       await request.send().timeout(const Duration(seconds: 180));
@@ -194,7 +252,6 @@ class _ChatPageState extends State<ChatPage> {
         final String questionSuivi = data['questionSuivi'] ??
             'Voulez-vous les solutions ? 🌿';
 
-        // Construire le message complet
         String messageComplet = messagePrincipal;
 
         if (risques.isNotEmpty) {
@@ -215,7 +272,6 @@ class _ChatPageState extends State<ChatPage> {
           _isLoading = false;
         });
 
-        // Sauvegarder en base
         final isLoggedIn = await AuthStorage.isLoggedIn();
         if (!isLoggedIn) return;
 
@@ -235,7 +291,7 @@ class _ChatPageState extends State<ChatPage> {
               role: 'assistant', contenu: messageComplet);
         }
       } else if (response.statusCode == 400) {
-        // ❌ Pas du maïs
+        // ❌ Pas du maïs, ou nombre de photos invalide
         final erreur = response.body.contains('{')
             ? jsonDecode(response.body).toString()
             : response.body;
@@ -246,9 +302,9 @@ class _ChatPageState extends State<ChatPage> {
             'type': 'text',
             'contenu':
             '⚠️ $erreur\n\nConseils pour une bonne analyse :\n\n'
-                '📸 Photographiez une **feuille de maïs** entière\n'
-                '🌿 Assurez-vous que la feuille remplit bien le cadre\n'
-                '☀️ Prenez la photo en pleine lumière',
+                '📸 Photographiez des **feuilles/épis de maïs** entiers\n'
+                '🌿 Assurez-vous que la zone atteinte remplit bien le cadre\n'
+                '☀️ Prenez les photos en pleine lumière',
           });
           _isLoading = false;
         });
@@ -293,7 +349,6 @@ class _ChatPageState extends State<ChatPage> {
 
     String reponse;
 
-    // ✅ Détecter si l'utilisateur demande les solutions
     final textLower = text.toLowerCase();
     final demandeSolutions = textLower.contains('oui') ||
         textLower.contains('solution') ||
@@ -305,18 +360,17 @@ class _ChatPageState extends State<ChatPage> {
     if (demandeSolutions && _dernierResultatAnalyse != null) {
       reponse = _construireReponsesSolutions();
     } else if (_dernierResultatAnalyse != null) {
-      // Question générale sur l'analyse en cours
       reponse = '🌿 Je suis spécialisé dans l\'analyse du maïs. '
           'Voici ce que je peux faire :\n\n'
-          '📸 Analysez une nouvelle photo\n'
+          '📸 Analysez de nouvelles photos\n'
           '💊 Demandez les solutions pour les maladies détectées\n'
           '❓ Posez une question sur votre culture de maïs';
     } else {
       reponse = '🌽 Bonjour ! Je suis votre assistant spécialisé '
           'dans la santé du maïs.\n\n'
-          'Pour commencer, prenez ou importez une photo '
-          'd\'une feuille de maïs en utilisant les icônes '
-          'caméra ou galerie ci-dessous. 📸';
+          'Pour commencer, ajoutez 2 à 5 photos '
+          'de votre plant de maïs (feuille, épi, tige...) en utilisant '
+          'les icônes caméra ou galerie ci-dessous. 📸';
     }
 
     setState(() {
@@ -325,7 +379,6 @@ class _ChatPageState extends State<ChatPage> {
     });
     _scrollToBottom();
 
-    // Sauvegarder en base
     final isLoggedIn = await AuthStorage.isLoggedIn();
     if (!isLoggedIn) return;
 
@@ -365,10 +418,11 @@ class _ChatPageState extends State<ChatPage> {
     for (final maladie in maladies) {
       final nom = maladie['nom'] ?? 'Maladie inconnue';
       final probabilite = ((maladie['probabilite'] ?? 0) * 100).round();
+      final treatment = maladie['treatment'];
 
       sb.write('---\n');
       sb.write('🔴 **$nom** ($probabilite%)\n\n');
-      sb.write(_getSolutionPourMaladie(nom));
+      sb.write(_formatTreatment(treatment, nom));
       sb.write('\n\n');
     }
 
@@ -377,12 +431,56 @@ class _ChatPageState extends State<ChatPage> {
     sb.write('Consultez un agronome local pour un diagnostic de terrain '
         'et des traitements adaptés à votre région.\n\n');
     sb.write(
-        '📸 Voulez-vous analyser une autre feuille de maïs ?');
+        '📸 Voulez-vous analyser d\'autres photos de maïs ?');
 
     return sb.toString();
   }
 
-  // ── Solutions par maladie connue ──────────────────────────
+  // ── Formater le traitement renvoyé par crop.health ─────────
+  // (biologique / chimique / prévention). Repli sur le texte générique
+  // si l'API n'a rien fourni pour cette classe précise.
+  String _formatTreatment(dynamic treatment, String nomMaladie) {
+    if (treatment == null) {
+      return _getSolutionPourMaladie(nomMaladie);
+    }
+
+    final biological = (treatment['biological'] as List<dynamic>?) ?? [];
+    final chemical = (treatment['chemical'] as List<dynamic>?) ?? [];
+    final prevention = (treatment['prevention'] as List<dynamic>?) ?? [];
+
+    if (biological.isEmpty && chemical.isEmpty && prevention.isEmpty) {
+      return _getSolutionPourMaladie(nomMaladie);
+    }
+
+    final sb = StringBuffer();
+
+    if (chemical.isNotEmpty) {
+      sb.write('**Traitement chimique :**\n');
+      for (final c in chemical) {
+        sb.write('• $c\n');
+      }
+      sb.write('\n');
+    }
+
+    if (biological.isNotEmpty) {
+      sb.write('**Traitement biologique :**\n');
+      for (final b in biological) {
+        sb.write('• $b\n');
+      }
+      sb.write('\n');
+    }
+
+    if (prevention.isNotEmpty) {
+      sb.write('**Prévention :**\n');
+      for (final p in prevention) {
+        sb.write('• $p\n');
+      }
+    }
+
+    return sb.toString().trim();
+  }
+
+  // ── Solutions par maladie connue (repli si l'API n'a rien) ─
   String _getSolutionPourMaladie(String nomMaladie) {
     final nom = nomMaladie.toLowerCase();
 
@@ -438,7 +536,6 @@ class _ChatPageState extends State<ChatPage> {
           'Continuez vos bonnes pratiques culturales.';
     }
 
-    // Solution générique
     return '**Recommandations générales :**\n'
         '• Consultez un agronome pour identifier précisément cette maladie\n'
         '• Isolez les plants touchés pour éviter la propagation\n'
@@ -452,25 +549,8 @@ class _ChatPageState extends State<ChatPage> {
       _messages.clear();
       _conversationId = null;
       _dernierResultatAnalyse = null;
+      _photosEnAttente.clear();
     });
-  }
-
-  // ── Ajouter une image ──────────────────────────────────────
-  Future<void> _ajouterImage(ImageSource source) async {
-    final picker = ImagePicker();
-    final image = await picker.pickImage(source: source, imageQuality: 80);
-    if (image == null) return;
-
-    setState(() {
-      _messages.add({
-        'role': 'user',
-        'type': 'image',
-        'imagePath': image.path,
-        'contenu': '',
-      });
-    });
-    _scrollToBottom();
-    await _analyserImage(image.path);
   }
 
   // ── BUILD ──────────────────────────────────────────────────
@@ -508,8 +588,9 @@ class _ChatPageState extends State<ChatPage> {
       ),
       body: Column(
         children: [
+          _buildBanner(),
           Expanded(
-            child: _messages.isEmpty
+            child: (_messages.isEmpty && _photosEnAttente.isEmpty)
                 ? _buildEmptyState(textColor)
                 : ListView.builder(
               controller: _scrollController,
@@ -525,7 +606,125 @@ class _ChatPageState extends State<ChatPage> {
               },
             ),
           ),
+          _buildStagingArea(darkMode),
           _buildInputBar(inputBgColor, darkMode),
+        ],
+      ),
+    );
+  }
+
+  // ── Bandeau conseil de cadrage (dismissible + auto 5 min) ──
+  Widget _buildBanner() {
+    if (!_showBanner) return const SizedBox.shrink();
+
+    return Container(
+      width: double.infinity,
+      color: const Color(0xFF4CD964).withValues(alpha: 0.15),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(
+        children: [
+          const Expanded(
+            child: Text(
+              '📸 Conseil : ajoutez 2 à 5 photos (feuille + épi, gros plan '
+                  'sur la zone atteinte, en pleine lumière) pour un diagnostic '
+                  'plus précis.',
+              style: TextStyle(fontSize: 12, color: Color(0xFF2E7D32)),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close, size: 18, color: Color(0xFF2E7D32)),
+            tooltip: 'Fermer',
+            onPressed: () {
+              _bannerTimer?.cancel();
+              setState(() => _showBanner = false);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Zone d'attente des photos avant analyse ────────────────
+  Widget _buildStagingArea(bool darkMode) {
+    if (_photosEnAttente.isEmpty) return const SizedBox.shrink();
+
+    final peutAnalyser = _photosEnAttente.length >= _minPhotos;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: darkMode ? const Color(0xFF1E1E1E) : Colors.grey[100],
+        border: Border(
+            top: BorderSide(color: Colors.grey.withValues(alpha: 0.2))),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            height: 72,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: _photosEnAttente.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (ctx, i) {
+                return Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: Image.file(
+                        File(_photosEnAttente[i]),
+                        width: 64,
+                        height: 64,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    Positioned(
+                      top: -6,
+                      right: -6,
+                      child: GestureDetector(
+                        onTap: () => _retirerPhotoEnAttente(i),
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.close,
+                              size: 14, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Text(
+                '${_photosEnAttente.length}/$_maxPhotos photo'
+                    '${_photosEnAttente.length > 1 ? 's' : ''}'
+                    '${peutAnalyser ? '' : ' — minimum $_minPhotos requis'}',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: peutAnalyser ? Colors.green : Colors.orange,
+                ),
+              ),
+              const Spacer(),
+              ElevatedButton.icon(
+                onPressed: peutAnalyser ? _lancerAnalyse : null,
+                icon: const Icon(Icons.search, size: 18),
+                label: Text('Analyser (${_photosEnAttente.length})'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF4CD964),
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: Colors.grey,
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -567,7 +766,8 @@ class _ChatPageState extends State<ChatPage> {
               ),
             ),
             child: const Text(
-              '📸 Photographiez une feuille de maïs\npour détecter les maladies et risques',
+              '📸 Ajoutez 2 à 5 photos de votre plant de maïs\n'
+                  'pour détecter les maladies et risques',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: Color(0xFF4CD964),
@@ -644,26 +844,46 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
+  // ── Bulle image : gère 1 photo OU plusieurs (grille) ───────
   Widget _buildImageBubble(Map<String, dynamic> message) {
-    final imagePath = message['imagePath'] as String?;
+    final imagePaths =
+    (message['imagePaths'] as List<dynamic>?)?.cast<String>();
     final imageUrl = message['imageUrl'] as String?;
 
-    Widget imageWidget;
-    if (imagePath != null) {
-      imageWidget = Image.file(File(imagePath),
-          width: 220, height: 220, fit: BoxFit.cover);
+    if (imagePaths != null && imagePaths.isNotEmpty) {
+      if (imagePaths.length == 1) {
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Image.file(File(imagePaths.first),
+              width: 220, height: 220, fit: BoxFit.cover),
+        );
+      }
+      // Plusieurs photos : petite grille 2 colonnes
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: SizedBox(
+          width: 220,
+          child: Wrap(
+            children: imagePaths.map((p) {
+              return Image.file(
+                File(p),
+                width: 108,
+                height: 108,
+                fit: BoxFit.cover,
+              );
+            }).toList(),
+          ),
+        ),
+      );
     } else if (imageUrl != null) {
-      imageWidget = Image.network(imageUrl,
-          width: 220, height: 220, fit: BoxFit.cover);
-    } else {
-      imageWidget =
-      const Icon(Icons.image, size: 80, color: Colors.grey);
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Image.network(imageUrl,
+            width: 220, height: 220, fit: BoxFit.cover),
+      );
     }
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: imageWidget,
-    );
+    return const Icon(Icons.image, size: 80, color: Colors.grey);
   }
 
   Widget _buildTypingIndicator(Color bubbleBgColor) {
@@ -714,14 +934,14 @@ class _ChatPageState extends State<ChatPage> {
           IconButton(
             icon: const Icon(Icons.camera_alt_outlined,
                 color: Color(0xFF4CD964)),
-            tooltip: 'Prendre une photo',
-            onPressed: () => _ajouterImage(ImageSource.camera),
+            tooltip: 'Ajouter une photo (caméra)',
+            onPressed: () => _ajouterPhotoEnAttente(ImageSource.camera),
           ),
           IconButton(
             icon: const Icon(Icons.image_outlined,
                 color: Color(0xFF4CD964)),
-            tooltip: 'Importer une image',
-            onPressed: () => _ajouterImage(ImageSource.gallery),
+            tooltip: 'Ajouter une photo (galerie)',
+            onPressed: () => _ajouterPhotoEnAttente(ImageSource.gallery),
           ),
           Expanded(
             child: TextField(

@@ -20,7 +20,10 @@ public class AnalyseService {
     private String apiKey;
 
     private static final String CROP_HEALTH_URL =
-            "https://crop.kindwise.com/api/v1/identification";
+            "https://crop.kindwise.com/api/v1/identification?details=treatment&language=fr";
+
+    // ✅ Seuil en dessous duquel on considère le diagnostic comme incertain
+    private static final double SEUIL_CONFIANCE = 0.40;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final HttpClient httpClient = HttpClient.newHttpClient();
@@ -60,17 +63,21 @@ public class AnalyseService {
             )
     );
 
-    // ── Analyser une image ─────────────────────────────────
-    public AnalyseResponse analyserImage(MultipartFile image,
-                                          Integer clientId) throws Exception {
+    // ── Analyser 2 à 5 images (une seule identification) ────
+    public AnalyseResponse analyserImage(List<MultipartFile> images,
+                                         Integer clientId) throws Exception {
 
-        // 1. Encoder l'image en base64
-        String imageBase64 = Base64.getEncoder()
-                .encodeToString(image.getBytes());
+        // 1. Encoder chaque image en base64
+        List<String> imagesBase64 = new ArrayList<>();
+        for (MultipartFile image : images) {
+            String base64 = Base64.getEncoder().encodeToString(image.getBytes());
+            imagesBase64.add("data:image/jpeg;base64," + base64);
+        }
 
         // 2. Construire la requête JSON pour crop.health
+        //    (plusieurs images = 1 seule identification = 1 crédit)
         String requestBody = objectMapper.writeValueAsString(Map.of(
-                "images", List.of("data:image/jpeg;base64," + imageBase64),
+                "images", imagesBase64,
                 "latitude", 0.0,
                 "longitude", 0.0
         ));
@@ -101,7 +108,7 @@ public class AnalyseService {
         if (!estMais) {
             throw new IllegalArgumentException(
                     "⚠️ Cette plante ne semble pas être du maïs. " +
-                    "Veuillez photographier une feuille de maïs pour obtenir une analyse.");
+                            "Veuillez photographier une feuille de maïs pour obtenir une analyse.");
         }
 
         // 6. Extraire les maladies détectées
@@ -115,8 +122,19 @@ public class AnalyseService {
         List<String> risques = RISQUES_PAR_SAISON.getOrDefault(
                 saison, List.of());
 
-        // 9. Construire le message principal
-        String messagePrincipal = construireMessage(maladies, saison);
+        // 9. Vérifier le niveau de confiance du meilleur résultat
+        double probabiliteMax = maladies.isEmpty()
+                ? 1.0 // pas de maladie détectée = "sain", pas d'incertitude à signaler
+                : maladies.get(0).getProbabilite();
+        boolean confianceFaible = !maladies.isEmpty() && probabiliteMax < SEUIL_CONFIANCE;
+
+        // 10. Construire le message principal
+        String messagePrincipal = construireMessage(maladies, saison, confianceFaible, probabiliteMax);
+
+        // 11. Adapter la question de suivi selon la confiance
+        String questionSuivi = confianceFaible
+                ? "Voulez-vous réessayer avec une nouvelle photo, ou consulter quand même les pistes possibles ? 🌿"
+                : "Voulez-vous que je vous donne les solutions pour traiter ces problèmes ? 🌿";
 
         return new AnalyseResponse(
                 true,
@@ -124,7 +142,7 @@ public class AnalyseService {
                 messagePrincipal,
                 maladies,
                 risques,
-                "Voulez-vous que je vous donne les solutions pour traiter ces problèmes ? 🌿"
+                questionSuivi
         );
     }
 
@@ -147,7 +165,7 @@ public class AnalyseService {
                     if (probability > 0.3) {
                         for (String mot : MOTS_CLES_MAIS) {
                             if (name.contains(mot) ||
-                                scientific.contains(mot)) {
+                                    scientific.contains(mot)) {
                                 return true;
                             }
                         }
@@ -200,21 +218,50 @@ public class AnalyseService {
             String nomScientifique = suggestion
                     .path("scientific_name").asText("");
 
-            // Déterminer la gravité selon la probabilité
             String gravite;
             if (probabilite >= 0.7) gravite = "Élevée 🔴";
             else if (probabilite >= 0.4) gravite = "Modérée 🟡";
             else gravite = "Faible 🟢";
 
-            maladies.add(new AnalyseResponse.MaladieDetectee(
-                    nom, nomScientifique, probabilite, gravite));
+            AnalyseResponse.MaladieDetectee maladie = new AnalyseResponse.MaladieDetectee(
+                    nom, nomScientifique, probabilite, gravite);
+
+            // ✅ Extraire le traitement fourni par crop.health (si disponible)
+            JsonNode treatmentNode = suggestion.path("details").path("treatment");
+            if (!treatmentNode.isMissingNode() && !treatmentNode.isNull()) {
+                AnalyseResponse.Treatment treatment = new AnalyseResponse.Treatment(
+                        extraireListeTraitement(treatmentNode.path("biological")),
+                        extraireListeTraitement(treatmentNode.path("chemical")),
+                        extraireListeTraitement(treatmentNode.path("prevention"))
+                );
+                maladie.setTreatment(treatment);
+            }
+
+            maladies.add(maladie);
         }
 
-        // Trier par probabilité décroissante
         maladies.sort((a, b) ->
                 Double.compare(b.getProbabilite(), a.getProbabilite()));
 
         return maladies;
+    }
+
+    // ── Extraire une liste de conseils (array OU string OU objet) ─────
+    private List<String> extraireListeTraitement(JsonNode node) {
+        List<String> resultat = new ArrayList<>();
+        if (node.isMissingNode() || node.isNull()) return resultat;
+
+        if (node.isArray()) {
+            for (JsonNode item : node) {
+                resultat.add(item.asText());
+            }
+        } else if (node.isTextual()) {
+            resultat.add(node.asText());
+        } else if (node.isObject()) {
+            node.fieldNames().forEachRemaining(field ->
+                    resultat.add(node.path(field).asText()));
+        }
+        return resultat;
     }
 
     // ── Détecter la saison automatiquement ────────────────
@@ -231,18 +278,35 @@ public class AnalyseService {
     // ── Construire le message principal ───────────────────
     private String construireMessage(
             List<AnalyseResponse.MaladieDetectee> maladies,
-            String saison) {
+            String saison,
+            boolean confianceFaible,
+            double probabiliteMax) {
 
         if (maladies.isEmpty()) {
             return "🌿 Bonne nouvelle ! Aucune maladie significative " +
-                   "n'a été détectée sur votre plant de maïs. " +
-                   "Votre culture semble en bonne santé pour la saison " +
-                   saison + ".";
+                    "n'a été détectée sur votre plant de maïs. " +
+                    "Votre culture semble en bonne santé pour la saison " +
+                    saison + ".";
         }
 
         StringBuilder sb = new StringBuilder();
-        sb.append("🔍 Analyse terminée pour votre plant de maïs ")
-          .append("(").append(saison).append(") :\n\n");
+
+        if (confianceFaible) {
+            // ⚠️ Diagnostic peu fiable : on prévient avant d'afficher les pistes
+            sb.append("⚠️ **Résultat incertain** (confiance maximale : ")
+                    .append(Math.round(probabiliteMax * 100))
+                    .append("%)\n\n")
+                    .append("L'analyse n'a pas pu identifier la maladie avec certitude ")
+                    .append("sur cette image. Pour un diagnostic plus fiable, essayez de :\n\n")
+                    .append("📸 Vous rapprocher de la zone atteinte (feuille, épi, tige)\n")
+                    .append("☀️ Prendre la photo en pleine lumière naturelle\n")
+                    .append("🔍 Cadrer un seul organe malade, sans arrière-plan chargé\n\n")
+                    .append("Voici tout de même les pistes les plus probables identifiées ")
+                    .append("(**à interpréter avec prudence**) :\n\n");
+        } else {
+            sb.append("🔍 Analyse terminée pour votre plant de maïs ")
+                    .append("(").append(saison).append(") :\n\n");
+        }
 
         for (int i = 0; i < maladies.size(); i++) {
             var m = maladies.get(i);
@@ -251,9 +315,9 @@ public class AnalyseService {
                 sb.append(" (").append(m.getNomScientifique()).append(")");
             }
             sb.append("\n   Probabilité : ")
-              .append(Math.round(m.getProbabilite() * 100))
-              .append("% | Gravité : ").append(m.getGravite())
-              .append("\n\n");
+                    .append(Math.round(m.getProbabilite() * 100))
+                    .append("% | Gravité : ").append(m.getGravite())
+                    .append("\n\n");
         }
 
         return sb.toString();
