@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:translator/translator.dart';
 import 'package:agriscan/services/api_config.dart';
 import 'package:agriscan/services/auth_storage.dart';
 import 'package:agriscan/services/theme_provider.dart';
@@ -37,6 +38,9 @@ class _ChatPageState extends State<ChatPage> {
   // ── Bandeau conseil de cadrage ──────────────────────────────
   bool _showBanner = true;
   Timer? _bannerTimer;
+
+  // ── Traduction FR ↔ EN par bulle ─────────────────────────────
+  final GoogleTranslator _translator = GoogleTranslator();
 
   static String _getSaisonCourante() {
     final month = DateTime.now().month;
@@ -319,7 +323,9 @@ class _ChatPageState extends State<ChatPage> {
           _isLoading = false;
         });
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('❌ Erreur _analyserImages: $e');
+      debugPrint('StackTrace: $stackTrace');
       setState(() {
         _messages.add({
           'role': 'assistant',
@@ -602,7 +608,7 @@ class _ChatPageState extends State<ChatPage> {
                   return _buildTypingIndicator(bubbleBgColor);
                 }
                 return _buildMessage(
-                    _messages[i], bubbleBgColor, textColor);
+                    _messages[i], bubbleBgColor, textColor, i);
               },
             ),
           ),
@@ -782,7 +788,7 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Widget _buildMessage(Map<String, dynamic> message,
-      Color bubbleBgColor, Color textColor) {
+      Color bubbleBgColor, Color textColor, int index) {
     final isUser = message['role'] == 'user';
     final isImage = message['type'] == 'image';
 
@@ -828,13 +834,22 @@ class _ChatPageState extends State<ChatPage> {
               ),
               child: isImage
                   ? _buildImageBubble(message)
-                  : Text(
-                message['contenu'] ?? '',
-                style: TextStyle(
-                  color: textColor,
-                  fontSize: 14,
-                  height: 1.5,
-                ),
+                  : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _texteAffiche(message),
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 14,
+                      height: 1.5,
+                    ),
+                  ),
+                  // ✅ Bouton traduction, uniquement sur les messages
+                  // texte de l'assistant (pas sur ceux de l'utilisateur)
+                  if (!isUser) _buildTranslateButton(index, textColor),
+                ],
               ),
             ),
           ),
@@ -842,6 +857,87 @@ class _ChatPageState extends State<ChatPage> {
         ],
       ),
     );
+  }
+
+  // ── Texte à afficher selon la langue actuellement sélectionnée ──
+  String _texteAffiche(Map<String, dynamic> message) {
+    final langue = message['langueAffichee'] as String? ?? 'fr';
+    if (langue == 'en' && message['contenuEn'] != null) {
+      return message['contenuEn'] as String;
+    }
+    return message['contenu'] ?? '';
+  }
+
+  // ── Bouton 🌐 sous la bulle : bascule FR ↔ EN ──────────────
+  Widget _buildTranslateButton(int index, Color textColor) {
+    final message = _messages[index];
+    final langue = message['langueAffichee'] as String? ?? 'fr';
+    final enCours = message['traductionEnCours'] == true;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: InkWell(
+        onTap: enCours ? null : () => _toggleTraduction(index),
+        borderRadius: BorderRadius.circular(4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.translate,
+                size: 13, color: textColor.withValues(alpha: 0.55)),
+            const SizedBox(width: 4),
+            Text(
+              enCours
+                  ? 'Traduction...'
+                  : (langue == 'fr'
+                  ? 'View in English'
+                  : 'Voir en français'),
+              style: TextStyle(
+                fontSize: 11,
+                color: textColor.withValues(alpha: 0.55),
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Traduire (ou re-basculer) le message assistant à l'index donné ──
+  Future<void> _toggleTraduction(int index) async {
+    final message = _messages[index];
+    final langueActuelle = message['langueAffichee'] as String? ?? 'fr';
+    final nouvelleLangue = langueActuelle == 'fr' ? 'en' : 'fr';
+
+    // Si on bascule vers l'anglais et qu'on n'a pas encore traduit :
+    // appeler le traducteur. Sinon, juste rebasculer l'affichage
+    // (le texte anglais est déjà en cache).
+    if (nouvelleLangue == 'en' && message['contenuEn'] == null) {
+      setState(() => _messages[index]['traductionEnCours'] = true);
+      try {
+        final translation = await _translator.translate(
+          message['contenu'] ?? '',
+          from: 'fr',
+          to: 'en',
+        );
+        if (!mounted) return;
+        setState(() {
+          _messages[index]['contenuEn'] = translation.text;
+          _messages[index]['langueAffichee'] = 'en';
+          _messages[index]['traductionEnCours'] = false;
+        });
+      } catch (e) {
+        debugPrint('❌ Erreur traduction: $e');
+        if (!mounted) return;
+        setState(() => _messages[index]['traductionEnCours'] = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Traduction indisponible pour le moment.')),
+        );
+      }
+    } else {
+      setState(() => _messages[index]['langueAffichee'] = nouvelleLangue);
+    }
   }
 
   // ── Bulle image : gère 1 photo OU plusieurs (grille) ───────

@@ -48,6 +48,7 @@ dependencies:
   provider: 6.1.2
   path_provider: ^2.1.5
   http_parser: ^4.1.2
+  translator: ^1.0.4+1
   
 
 dev_dependencies:
